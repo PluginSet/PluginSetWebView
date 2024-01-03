@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context="com.pluginset.webview.WebViewActivity">
+
+    <include
+        android:id="@+id/web_view_bar"
+        layout="@layout/back_app_bar"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/web_view_bar_height" />
+
+    <WebView
+        android:id="@+id/web_view_content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+</LinearLayout>

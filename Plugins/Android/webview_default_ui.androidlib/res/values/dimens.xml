@@ -1,0 +1,5 @@
+<resources>
+    <dimen name="web_view_bar_height">40dp</dimen>
+    <dimen name="web_view_bar_icon_width">20dp</dimen>
+    <dimen name="web_view_bar_name_width">100dp</dimen>
+</resources>

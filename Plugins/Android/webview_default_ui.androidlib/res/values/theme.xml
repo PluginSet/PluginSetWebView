@@ -1,0 +1,6 @@
+<resources>
+    <style name="WebViewTheme" parent="android:Theme.NoTitleBar">
+        <!-- 屏蔽左划回退操作 -->
+        <item name="android:windowSwipeToDismiss">false</item>
+    </style>
+</resources>

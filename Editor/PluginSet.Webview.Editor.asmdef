@@ -1,0 +1,19 @@
+{
+    "name": "PluginSet.Webview.Editor",
+    "rootNamespace": "",
+    "references": [
+        "PluginSet.Core",
+        "PluginSet.Core.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
