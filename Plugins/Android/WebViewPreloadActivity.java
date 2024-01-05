@@ -16,15 +16,17 @@ public class WebViewPreloadActivity extends WebViewBaseActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        setContentView(R.layout.activity_web_preload_view);
         super.onCreate(savedInstanceState);
         if (webView != null) {
             ViewParent parent = webView.getParent();
             if (parent != null && parent instanceof ViewGroup) {
                 ((ViewGroup) parent).removeView(webView);
             }
+        } else {
+            finish();
+            return;
         }
-
-        setContentView(R.layout.activity_web_preload_view);
 
         LinearLayout.LayoutParams webViewLP = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT);
         webView.setLayoutParams(webViewLP);
@@ -46,7 +48,7 @@ public class WebViewPreloadActivity extends WebViewBaseActivity {
 
     @Override
     public void finish() {
-        webView.reload();
+        WebViewHelper.destroyPreloadWebView(this);
         super.finish();
     }
 

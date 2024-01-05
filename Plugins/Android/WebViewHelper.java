@@ -4,11 +4,15 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
+import android.net.http.SslError;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.DownloadListener;
+import android.webkit.SslErrorHandler;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
@@ -32,12 +36,14 @@ public class WebViewHelper {
     private static IPluginSetCallback _preloadCallback;
     private static WebViewJavaScriptInterface _javaScriptInterface;
 
-    public static void openUrl(final Activity currentActivity, String url, WebViewJavaScriptInterface javaScriptInterface) {
+    public static void openUrl(final Activity currentActivity, final String url, WebViewJavaScriptInterface javaScriptInterface) {
         _javaScriptInterface = javaScriptInterface;
 
-        Intent intent = new Intent(currentActivity, WebViewActivity.class);
-        intent.putExtra("url", url);
-        currentActivity.startActivity(intent);
+        currentActivity.runOnUiThread(() -> {
+            Intent intent = new Intent(currentActivity, WebViewActivity.class);
+            intent.putExtra("url", url);
+            currentActivity.startActivity(intent);
+        });
     }
 
     public static void openPreloadWebView(final Activity currentActivity, final IPluginSetCallback callback) {
@@ -48,14 +54,25 @@ public class WebViewHelper {
             return;
         }
 
-        Intent intent = new Intent(currentActivity, WebViewPreloadActivity.class);
-        currentActivity.startActivity(intent);
-        if (callback != null) {
-            callback.onSuccess("show web view");
-        }
+        currentActivity.runOnUiThread(() -> {
+            if (WebViewPreloadActivity.getWebView() == null) {
+                if (callback != null) {
+                    callback.onFailed(ErrorCode_Unload, "web view unload");
+                }
+                return;
+            }
+
+            Intent intent = new Intent(currentActivity, WebViewPreloadActivity.class);
+            currentActivity.startActivity(intent);
+            if (callback != null) {
+                callback.onSuccess("show web view");
+            }
+        });
+
     }
 
     public static void preloadWebView(final Activity currentActivity, final String url, final IPluginSetCallback callback, WebViewJavaScriptInterface javaScriptInterface) {
+//        Log.d("WebViewHelper", "preloadWebView 000000000000000000000000 " + url);
         if (WebViewPreloadActivity.getWebView() != null) {
             if (callback != null) {
                 callback.onFailed(ErrorCode_Repeated, "repeated request");
@@ -65,19 +82,33 @@ public class WebViewHelper {
 
         _javaScriptInterface = javaScriptInterface;
         currentActivity.runOnUiThread(() -> {
-            final WebView webView = new WebView(currentActivity);
-            initWebViewSettings(currentActivity, webView, url, callback);
+            final WebView webView = new WebView(currentActivity){
+                @Override
+                protected void onDetachedFromWindow() {
+//                    Log.d("WebViewHelper", "onDetachedFromWindow ************************");
+                    super.onDetachedFromWindow();
+                    if (WebViewPreloadActivity.getWebView() == this)
+                    {
+                        WebViewPreloadActivity.setWebView(null);
+                    }
+                }
+            };
             WebViewPreloadActivity.setWebView(webView);
+            initWebViewSettings(currentActivity, webView, url, callback);
         });
     }
 
     public static void destroyPreloadWebView(final Activity currentActivity)
     {
-        final WebView webView = WebViewPreloadActivity.getWebView();
-        if (webView == null)
+        final WebView webView0 = WebViewPreloadActivity.getWebView();
+        if (webView0 == null)
             return;
 
         currentActivity.runOnUiThread(() -> {
+            final WebView webView = WebViewPreloadActivity.getWebView();
+            if (webView == null)
+                return;
+
             webView.stopLoading();
             webView.clearCache(true);
             ViewGroup parent = (ViewGroup) webView.getParent();
@@ -111,12 +142,15 @@ public class WebViewHelper {
 
     public static void initWebViewSettings(final Activity currentActivity, WebView webView, String url, IPluginSetCallback callback)
     {
+//        Log.d("WebViewHelper", "initWebViewSettings 111111111111111111111111 " + url);
         _preloadCallback = callback;
         WebViewClient client = new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+//                Log.d("WebViewHelper", "shouldOverrideUrlLoading >>> ");
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
                     String url = request.getUrl().toString();
+//                    Log.d("WebViewHelper", "shouldOverrideUrlLoading >>> " + url);
                     //支持google play
                     if (url.startsWith("market:")
                             || url.startsWith("https://play.google.com/store/")
@@ -131,7 +165,14 @@ public class WebViewHelper {
             }
 
             @Override
+            public void onPageStarted(WebView view, String url, Bitmap favicon) {
+                super.onPageStarted(view, url, favicon);
+//                Log.d("WebViewHelper", "onPageStarted >>> " + url);
+            }
+
+            @Override
             public void onPageFinished(WebView view, String url) {
+//                Log.d("WebViewHelper", "onPageFinished >>> " + url + " progress:: " + view.getProgress());
                 super.onPageFinished(view, url);
                 if (callback == null || _preloadCallback == null) return;
 
@@ -146,6 +187,7 @@ public class WebViewHelper {
 
             @Override
             public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+//                Log.d("WebViewHelper", "onReceivedError >>> " + error.toString());
                 super.onReceivedError(view, request, error);
                 if (callback == null || _preloadCallback == null) return;
                 IPluginSetCallback callback1 = _preloadCallback;
@@ -155,11 +197,22 @@ public class WebViewHelper {
 
             @Override
             public void onReceivedHttpError(WebView view, WebResourceRequest request, WebResourceResponse errorResponse) {
+//                Log.d("WebViewHelper", "onReceivedHttpError >>> " + errorResponse.toString());
                 super.onReceivedHttpError(view, request, errorResponse);
                 if (callback == null || _preloadCallback == null) return;
                 IPluginSetCallback callback1 = _preloadCallback;
                 _preloadCallback = null;
                 callback1.onFailed(ErrorCode_HttpError, errorResponse.toString());
+            }
+
+            @Override
+            public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
+//                Log.d("WebViewHelper", "onReceivedSslError >>> " + error.toString());
+                super.onReceivedSslError(view, handler, error);
+                if (callback == null || _preloadCallback == null) return;
+                IPluginSetCallback callback1 = _preloadCallback;
+                _preloadCallback = null;
+                callback1.onFailed(ErrorCode_HttpError, error.toString());
             }
         };
 
